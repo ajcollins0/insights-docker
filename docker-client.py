@@ -1,5 +1,6 @@
 
 import util
+import sys
 import json
 from docker import Client
 
@@ -54,18 +55,11 @@ class DockerClient:
     def inspect(self, obj_id):
         """ returns a dict of the inspection of a container or image """
 
-        if self._is_a_container(obj_id):
-            return self._container_inspect(obj_id)
-
-        return self._image_inspect(obj_id)
-
-    def _container_inspect(self, obj_id):
-        pass
-        #FIXME the return dicts will have multiple keys, need to make a 
-        # to dict converter in util
-
-    def _image_inspect(self, obj_id):
-        pass
+        cmd = ['docker', 'inspect', obj_id]
+        out = util.subp(cmd)
+        trim_out = out.stdout.strip()
+        ret = json.loads(trim_out[2:-2])
+        return ret
 
     def _is_a_container(self, obj_id):
         """ returns true if obj ID is a container ID"""
@@ -76,16 +70,28 @@ class DockerClient:
 
         return False
 
+    def remove_container(self, cont_id):
+        """ *force* removes the given container id, fails if
+            container ID isn't found """
+
+        cmd = ['docker', 'rm', '-f', cont_id]
+        out = util.subp(cmd)
+
+        if out.return_code is not 0:
+            #FIXME RAISE EXCEPT HERE
+            print "container ID not found, unable to remove object:"
+            print cont_id
+
+    def create_container(self):
+        pass
+
     def dprint(self, json_obj):
         """debug method for printing"""
-
         print json.dumps(json_obj, indent=2)
 
 if __name__ == '__main__':
 
     x = DockerClient()
-
-    x.inspect("ea061f56e49899b605cb1157731a53f50fe97c35d714f2835e540253928dc9e0 ")
 
 
     #c = Client(base_url='unix://var/run/docker.sock')

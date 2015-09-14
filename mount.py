@@ -178,10 +178,6 @@ class DockerMount(Mount):
         variable so that they can be cleaned on unmount.
         """
         try:
-            # return self.client.create_container(
-            #     image=iid, command='/bin/true',
-            #     environment=['_ATOMIC_TEMP_CONTAINER'],
-            #     detach=True, network_disabled=True)['Id']
             return self.docker_client.create_container(iid)
         except docker.errors.APIError as ex:
             raise MountError('Error creating temporary container:\n' + str(ex))
@@ -194,14 +190,6 @@ class DockerMount(Mount):
         so that they can be cleaned on unmount.
         """
         try:
-            # iid = self.client.commit(
-            #     container=cid,
-            #     conf={
-            #         'Labels': {
-            #             'io.projectatomic.Temporary': 'true'
-            #         }
-            #     }
-            # )['Id']
             iid = self.docker_client.commit(cid)
         except docker.errors.APIError as ex:
             raise MountError(str(ex))
@@ -247,7 +235,6 @@ class DockerMount(Mount):
         Mounts a container or image referred to by identifier to
         the host filesystem.
         """
-        # driver = self.client.info()['Driver']
         driver = self.docker_client.info()['Storage Driver']
         driver_mount_fn = getattr(self, "_mount_" + driver,
                                   self._unsupported_backend)
@@ -393,7 +380,8 @@ class DockerMount(Mount):
 
         if info['Config']:
             if '_RHAI_TEMP_CONTAINER=True' in info['Config']['Env']:
-                self.docker_client.remove_container(cid)
+                #FIXME THIS IS BROKEN
+                self.docker_client.remove_image(iid)
 
         # If we are creating temporary dirs for mount points
         # based on the cid, then we should rmdir them while
@@ -437,7 +425,6 @@ class DockerMount(Mount):
                                                           self.mountpoint))
 
         Mount.unmount_path(self.mountpoint)
-        # cinfo = self.client.inspect_container(cid)
         cinfo = self.docker_client.inspect(cid)
 
         # Was the container live mounted? If so, done.
@@ -475,5 +462,4 @@ class DockerMount(Mount):
             raise MountError('Device mounted at {} is not an atomic mount.')
         cid = self._get_overlay_mount_cid()
         Mount.unmount_path(self.mountpoint)
-        # self._cleanup_container(self.client.inspect_container(cid))
         self._cleanup_container(self.docker_client.inspect(cid))

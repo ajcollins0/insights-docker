@@ -19,7 +19,7 @@ class DockerClient:
         trim_out = out.stdout.strip()
         return_dict = {}
         for line in trim_out.split('\n'):
-            tmp_list = line.split(':'[0])
+            tmp_list = line.split(':', 1)
             return_dict[tmp_list[0].strip()] = tmp_list[1].strip()
 
         return return_dict
@@ -61,11 +61,20 @@ class DockerClient:
         ret = json.loads(trim_out[2:-2])
         return ret
 
-    def _is_a_container(self, obj_id):
+    def is_a_container(self, obj_id):
         """ returns true if obj ID is a container ID"""
 
         conts = self.containers(False)
         if obj_id in conts:
+            return True
+
+        return False
+
+    def is_an_image(self, obj_id):
+        """ returns true if obj ID is a image ID"""
+
+        ims = self.images()
+        if obj_id in ims:
             return True
 
         return False
@@ -82,8 +91,63 @@ class DockerClient:
             print "container ID not found, unable to remove object:"
             print cont_id
 
-    def create_container(self):
-        pass
+    def create_container(self, iid):
+        """ creates a container from image iid and returns the new
+            container's id """
+
+        cmd = ['docker', 'create', '--env=_RHAI_TEMP_CONTAINER',
+               iid, '/bin/true']
+        out = util.subp(cmd)
+
+        if out.return_code is not 0:
+            #FIXME RAISE EXCEPT HERE
+            print "container was not created"
+
+        return out.stdout.strip()
+
+    def commit(self, container):
+
+
+        cmd = ['docker', 'commit', '-c', "ENV _RHAI_TEMP_CONTAINER=True", container]
+        out = util.subp(cmd)
+        if out.return_code is not 0:
+            #FIXME RAISE EXCEPT HERE
+            print "image was not commited"
+
+        return out.stdout.strip()
+
+
+    def remove_image(self, image_id):
+
+        cmd = ['docker', 'rmi', '-f', image_id]
+        out = util.subp(cmd)
+        if out.return_code is not 0:
+            #FIXME RAISE EXCEPT HERE
+            print "image was not deleted"
+
+    def _force_remove_all_temp_containers(self):
+        """ inspects all contaiers and removes any that are
+            temporary containers created by RHAI """
+
+        conts = self.containers(False)
+        tag = '_RHAI_TEMP_CONTAINER'
+
+        for cid in conts:
+            info = self.inspect(cid)
+            if tag in info['Config']['Env']:
+                self.remove_container(cid)
+
+    def _force_remove_all_temp_images(self):
+        """ inspects all images and removes any that are
+            temporary containers created by RHAI """
+
+        ims = self.images()
+        tag = '_RHAI_TEMP_CONTAINER=True'
+
+        for iid in ims:
+            info = self.inspect(iid)
+            if tag in info['Config']['Env']:
+                self.remove_image(cid)
 
     def dprint(self, json_obj):
         """debug method for printing"""
@@ -93,9 +157,6 @@ if __name__ == '__main__':
 
     x = DockerClient()
 
-
-    #c = Client(base_url='unix://var/run/docker.sock')
-    # print json.dumps(c.info(),indent=2)
-
-
-
+    temp = x.info()
+    x.dprint(temp)
+    

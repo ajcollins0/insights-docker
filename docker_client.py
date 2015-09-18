@@ -4,7 +4,8 @@ import sys
 import json
 from docker import Client
 
-""" makeshift docker api suited for RHAI """
+""" makeshift docker api suited for RHAI POC """
+
 
 class DockerClient:
 
@@ -107,7 +108,6 @@ class DockerClient:
 
     def commit(self, container):
 
-
         cmd = ['docker', 'commit', '-c', "ENV _RHAI_TEMP_CONTAINER=True", container]
         out = util.subp(cmd)
         if out.return_code is not 0:
@@ -115,7 +115,6 @@ class DockerClient:
             print "image was not commited"
 
         return out.stdout.strip()
-
 
     def remove_image(self, image_id):
 

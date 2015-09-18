@@ -1,34 +1,15 @@
 # Copyright (C) 2015 Red Hat, All rights reserved.
-# AUTHORS: William Temple <wtemple@redhat.com>
-#          Brent Baude    <bbaude@redhat.com>
-#
-# This library is a component of Project Atomic.
-#
-#    Project Atomic is free software; you can redistribute it and/or
-#    modify it under the terms of the GNU General Public License as
-#    published by the Free Software Foundation; either version 2 of
-#    the License, or (at your option) any later version.
-#
-#    Project Atomic is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with Project Atomic; if not, write to the Free Software
-#    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
-#    02110-1301 USA.
-#
+# Original AUTHORS:
+#                   William Temple <wtemple@redhat.com>
+#                   Brent Baude    <bbaude@redhat.com>
+# Augments for POC by:
+#                   Alex Collins   <alcollin@redhat.com>
 
 import os
 import sys
-
 import docker
 import json
-
 import util
-
-from fnmatch import fnmatch as matches
 from docker_client import DockerClient
 
 """ Module for mounting and unmounting containerized applications. """
@@ -168,7 +149,6 @@ class DockerMount(Mount):
         self.client = docker.Client()
         self.docker_client = DockerClient()
         self.mnt_mkdir = mnt_mkdir
-
 
     def _create_temp_container(self, iid):
         """

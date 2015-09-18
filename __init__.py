@@ -3,42 +3,55 @@
 # AUTHORS: Alex Collins <alcollin@redhat.com>
 
 import os
-import util 
-import docker
-
+from docker_client import DockerClient
 from mount import DockerMount, Mount, MountError
+from emulator import Emulator
 
-if __name__ == '__main__':
-    
-    if os.geteuid() != 0:
-            raise ValueError("This command must be run as root.")
 
-    client = docker.Client(base_url='unix://var/run/docker.sock')
+def mount_obj(path, obj, driver):
 
-    for im in client.images(quiet=True):
-    
-        print im
+    DockerMount(path).mount(obj)
+
+    # only need to bind-mount on the devicemapper driver
+    if driver == 'devicemapper':
+        DockerMount.mount_path(os.path.join(path, "rootfs"), path, bind=True)
+
+
+def unmount_obj(path, driver):
+    dev = DockerMount.get_dev_at_mountpoint(path)
+
+    # If there's a bind-mount over the directory, unbind it.
+    if dev.rsplit('[', 1)[-1].strip(']') == '/rootfs' \
+            and driver == 'devicemapper':
+        Mount.unmount_path(path)
+
+    DockerMount(path).unmount()
+
+
+def main():
+
+    client = DockerClient()
+    emu = Emulator()
+
+    for im in client.images():
+        print im[:12]
         try:
-            print "mounting first thing"
-            DockerMount('tmp/').mount(im)
 
-            print "attempting to mount the rootfs"
-            # only need to bind-mount on the devicemapper driver
-            if client.info()['Driver'] == 'devicemapper':
-                DockerMount.mount_path(os.path.join('tmp/', "rootfs"), 'tmp/', bind=True)
+            emu.create_dirs()
+            mount_obj(emu.tmp_image_dir, im, client.info()['Storage Driver'])
+            emu.intial_setup()
 
-            print "attempting unmount"
+            emu.chroot_and_run()
 
-            dev = DockerMount.get_dev_at_mountpoint('tmp/')
-
-            # If there's a bind-mount over the directory, unbind it.
-            if dev.rsplit('[', 1)[-1].strip(']') == '/rootfs' \
-                    and client.info()['Driver'] == 'devicemapper':
-                Mount.unmount_path('tmp/')
-
-            DockerMount('tmp/').unmount()
-
+            emu.unmount()
+            unmount_obj(emu.tmp_image_dir, client.info()['Storage Driver'])
+            emu.remove_dirs()
 
         except MountError as dme:
             raise ValueError(str(dme))
 
+if __name__ == '__main__':
+
+    if os.geteuid() != 0:
+            raise ValueError("This MUST must be run as root.")
+    main()

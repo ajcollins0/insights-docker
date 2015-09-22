@@ -358,10 +358,15 @@ class DockerMount(Mount):
 
         info = self.docker_client.inspect(iid)
 
-        if info['Config']:
-            if '_RHAI_TEMP_CONTAINER=True' in info['Config']['Env']:
-                #FIXME THIS IS BROKEN
-                self.docker_client.remove_image(iid)
+
+        ##FIXME info['Config'] will be a null value and cause an exception if not RHEL based....
+        try:
+            if info['Config']:
+                if '_RHAI_TEMP_CONTAINER=True' in info['Config']['Env']:
+                    #FIXME THIS IS BROKEN
+                    self.docker_client.remove_image(iid)
+        except:
+            pass
 
         # If we are creating temporary dirs for mount points
         # based on the cid, then we should rmdir them while

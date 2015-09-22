@@ -1,8 +1,6 @@
 
 import util
-import sys
 import json
-from docker import Client
 
 """ makeshift docker api suited for RHAI POC """
 
@@ -50,7 +48,6 @@ class DockerClient:
         return_list = []
         for line in trim_out.split('\n'):
             return_list.append(line)
-
         return return_list
 
     def inspect(self, obj_id):
@@ -68,7 +65,6 @@ class DockerClient:
         conts = self.containers(False)
         if obj_id in conts:
             return True
-
         return False
 
     def is_an_image(self, obj_id):
@@ -87,7 +83,7 @@ class DockerClient:
         cmd = ['docker', 'rm', '-f', cont_id]
         out = util.subp(cmd)
 
-        if out.return_code is not 0:
+        if out.return_code != 0:
             #FIXME RAISE EXCEPT HERE
             print "container ID not found, unable to remove object:"
             print cont_id
@@ -100,28 +96,25 @@ class DockerClient:
                iid, '/bin/true']
         out = util.subp(cmd)
 
-        if out.return_code is not 0:
-            #FIXME RAISE EXCEPT HERE
+        if out.return_code != 0:
             print "container was not created"
-
         return out.stdout.strip()
 
     def commit(self, container):
+        """ commits the container into a new image with the given tag """
 
         cmd = ['docker', 'commit', '-c', "ENV _RHAI_TEMP_CONTAINER=True", container]
         out = util.subp(cmd)
-        if out.return_code is not 0:
-            #FIXME RAISE EXCEPT HERE
+        if out.return_code != 0:
             print "image was not commited"
-
         return out.stdout.strip()
 
     def remove_image(self, image_id):
+        """ force removes image image_id """
 
         cmd = ['docker', 'rmi', '-f', image_id]
         out = util.subp(cmd)
-        if out.return_code is not 0:
-            #FIXME RAISE EXCEPT HERE
+        if out.return_code != 0:
             print "image was not deleted"
 
     def _force_remove_all_temp_containers(self):
@@ -146,16 +139,8 @@ class DockerClient:
         for iid in ims:
             info = self.inspect(iid)
             if tag in info['Config']['Env']:
-                self.remove_image(cid)
+                self.remove_image(iid)
 
     def dprint(self, json_obj):
         """debug method for printing"""
         print json.dumps(json_obj, indent=2)
-
-if __name__ == '__main__':
-
-    x = DockerClient()
-
-    temp = x.info()
-    x.dprint(temp)
-    

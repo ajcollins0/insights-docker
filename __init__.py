@@ -9,6 +9,7 @@ from emulator import Emulator
 
 
 def mount_obj(path, obj, driver):
+    """ mounts the obj to the given path """
 
     DockerMount(path).mount(obj)
 
@@ -18,6 +19,8 @@ def mount_obj(path, obj, driver):
 
 
 def unmount_obj(path, driver):
+    """ unmount the given path """
+
     dev = DockerMount.get_dev_at_mountpoint(path)
 
     # If there's a bind-mount over the directory, unbind it.
@@ -28,27 +31,61 @@ def unmount_obj(path, driver):
     DockerMount(path).unmount()
 
 
-def main():
+def remove_old_data():
+    """ deleted old output """
+
+    import util
+    cmd = ['rm', '-rf', "/var/tmp/docker/"]
+    r = util.subp(cmd)
+    if r.return_code != 0:
+        print "old data was not deleted"
+
+
+def scan(images=True):
+    """ scanning method that will scan all images or containers """
 
     client = DockerClient()
     emu = Emulator()
 
-    for im in client.images():
-        print im[:12]
-        try:
+    objs = client.images() if images is True else client.containers()
 
+    # If there are no images/containers on the machine, objs will be ['']
+    if objs == ['']:
+        return
+
+    # does actual work here!
+    for im in objs:
+        try:
             emu.create_dirs()
             mount_obj(emu.tmp_image_dir, im, client.info()['Storage Driver'])
-            emu.intial_setup()
 
-            emu.chroot_and_run()
+            if emu.is_applicable():
 
-            emu.unmount()
+                print "scanning " + im[:12]
+                emu.intial_setup()
+
+                emu.chroot_and_run()
+
+                emu.unmount()
+            else:
+                print im[:12] + " is not RHEL based"
+
             unmount_obj(emu.tmp_image_dir, client.info()['Storage Driver'])
             emu.remove_dirs()
 
         except MountError as dme:
             raise ValueError(str(dme))
+
+    emu.gather_data(images)
+
+
+def main():
+
+    remove_old_data()
+    print "Scanning Images:"
+    scan(True)
+    print "Scanning Containers:"
+    scan(False)
 
 if __name__ == '__main__':
 

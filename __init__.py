@@ -90,5 +90,5 @@ def main():
 if __name__ == '__main__':
 
     if os.geteuid() != 0:
-            raise ValueError("This MUST must be run as root.")
+        raise ValueError("This MUST must be run as root.")
     main()
